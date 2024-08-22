@@ -1,61 +1,99 @@
-use crate::resources::Square;
-use crate::resources::SquareState;
+use crate::resources::Game;
+use crate::resources::Player;
 use crate::resources::Table;
+
+use std::collections::VecDeque;
 use std::io;
 use std::io::Write;
 
 pub mod resources;
 
 fn main() {
-    // "   A|B|C ")
-    // "1 |_|_|_ ")
-    // "2 |_|_|_ ")
-    // "3 |_|_|_ ")
+    // "   A|B|C "
+    // "1 |_|_|_ "
+    // "2 |_|_|_ "
+    // "3 |_|_|_ "
+    let size: u32 = 3;
 
-    let size: u32 = 5;
+    let mut game = Game::new();
 
-    // TODO: Move grid init inside module
-    let grid: Vec<Vec<Square>> = Vec::new();
+    // Manage turns by using a queue
+    let mut turn_queue: VecDeque<&mut Player> = VecDeque::new();
 
-    let mut table: Table = Table { size, grid };
+    let mut player_1: Player = Player::new(String::from("Alex"), 'x', false, 0);
+    turn_queue.push_back(&mut player_1);
 
-    table.make();
-    table.draw();
+    let mut player_2: Player = Player::new(String::from("Gaby"), 'o', false, 0);
+    turn_queue.push_back(&mut player_2);
 
-    // Prompt user
-    print!("(Player 1) Enter position: ");
-    let _ = io::stdout().flush();
+    let mut table: Table = Table::new(size);
+    table.init();
 
-    // Read input
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).expect("Error");
-    let input: &str = input.trim();
+    loop {
+        table.draw();
 
-    // Check input was two characters
-    assert_eq!(input.len(), 2);
+        let current_player = turn_queue
+            .pop_front()
+            .expect("Failed to get first element of the queue.");
 
-    let input: Vec<char> = input.chars().collect();
+        current_player.is_active = true;
 
-    let x = input[0]
-        .to_digit(10)
-        .expect("Error parsing 'x' coordinate from user input.");
+        // Prompt user
+        print!("({}) Enter position: ", current_player.name);
+        let _ = io::stdout().flush();
 
-    let y = input[1]
-        .to_digit(10)
-        .expect("Error parsing 'x' coordinate from user input.");
+        // Read input
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).expect("Error");
+        let input: &str = input.trim();
 
-    // TODO: Better handling of index access
-    assert!(x < size);
-    assert!(x > 0);
+        // Exit if input is in the array
+        if ["q", "quit", "exit"].contains(&input) {
+            return;
+        }
 
-    assert!(y < size);
-    assert!(y > 0);
+        if ["r", "reset"].contains(&input) {
+            table.init();
+            turn_queue.push_front(current_player);
+            continue;
+        }
 
-    println!("x: {}, y: {}", x, y);
+        // Check input was two characters
+        if input.len() != 2 {
+            println!("❌ Please, enter two digits between 1 to {}!", size);
+            turn_queue.push_front(current_player);
+            continue;
+        }
 
-    // TODO: Create function that accepts the coordinates to update the state
-    table.grid[x as usize - 1][y as usize - 1].update_state(SquareState::Player1);
+        let input: Vec<char> = input.chars().collect();
 
-    // TODO: Implement loop and turns
-    table.draw();
+        let x = input[0]
+            .to_digit(10)
+            .expect("Error parsing 'x' coordinate from user input.");
+
+        let y = input[1]
+            .to_digit(10)
+            .expect("Error parsing 'x' coordinate from user input.");
+
+        if x > size || x < 1 {
+            println!("❌ Coordinate 'x' must be between 1 and {}!", size);
+            turn_queue.push_front(current_player);
+            continue;
+        }
+
+        if y > size || y < 1 {
+            println!("❌ Coordinate 'y' must be between 1 and {}!", size);
+            turn_queue.push_front(current_player);
+            continue;
+        }
+
+        table.update_symbol(current_player.symbol, x, y);
+
+        println!(
+            "Player '{}' played x:{} and y:{}",
+            current_player.name, x, y
+        );
+
+        turn_queue.push_back(current_player);
+    }
 }

@@ -1,53 +1,74 @@
-use std::{fmt, io};
-
-struct Coordinate {
-    x: u32,
-    y: u32,
+pub struct Game {
+    // Number of matches played so far
+    pub match_count: u32,
+    // Number of turns taken since the start of the game
+    pub game_turn_count: u32,
+    // Number of turns taken since the start of the match
+    pub match_turn_count: u32,
+    // List of errors to be displayed to the user at the start of a turn
+    pub error_buffer: Vec<String>,
 }
-pub enum SquareState {
-    Empty,
-    Player1,
-    Player2,
-}
 
-impl fmt::Display for SquareState {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            SquareState::Empty => write!(formatter, "_"),
-            SquareState::Player1 => write!(formatter, "x"),
-            SquareState::Player2 => write!(formatter, "o"),
+impl Game {
+    pub fn new() -> Game {
+        Game {
+            match_count: 0,
+            game_turn_count: 0,
+            match_turn_count: 0,
+            error_buffer: Vec::new(),
         }
     }
 }
 
-pub struct Square {
-    coordinate: Coordinate,
-    state: SquareState,
+pub struct Player {
+    pub name: String,
+    pub symbol: char,
+    pub is_active: bool,
+    pub score: u32,
 }
 
-impl Square {
-    pub fn update_state(&mut self, new_state: SquareState) {
-        self.state = new_state;
+impl Player {
+    pub fn new(name: String, symbol: char, is_active: bool, score: u32) -> Player {
+        Player {
+            name: name.to_string(),
+            symbol,
+            is_active,
+            score,
+        }
     }
 }
 
 pub struct Table {
     pub size: u32,
-    pub grid: Vec<Vec<Square>>,
+
+    // Create a 2-dimensional matrix where:
+    //   a row is an array of symbols
+    //   a column is an array of rows
+    grid: Vec<Vec<char>>,
 }
 
 impl Table {
+    pub fn new(size: u32) -> Table {
+        Table {
+            size,
+            grid: Vec::new(),
+        }
+    }
+
     pub fn draw(&self) {
+        // Escape sequence to delete terminal buffer
+        print!("\x1B[2J\x1B[H");
+
         let edge: &str = "|";
 
-        for x in 0..self.size {
+        for y in 0..self.size {
             println!("");
 
-            for y in 0..self.size {
+            for x in 0..self.size {
                 print!("{edge}");
-                print!("{}", self.grid[x as usize][y as usize].state);
+                print!("{}", self.grid[x as usize][y as usize]);
 
-                if y == self.size - 1 {
+                if x == self.size - 1 {
                     // Draw the outer edge of the grid
                     print!("{edge}");
                 }
@@ -56,34 +77,46 @@ impl Table {
         println!("");
     }
 
-    pub fn make(&mut self) {
-        // Create a 2-dimensional matrix
-        // where a column is an array of rows
-        // and a row is an array of Coordinates
-        let mut columns: Vec<Vec<Square>> = Vec::new();
+    pub fn init(&mut self) {
+        // The "x" coordinate measures the rows
+        // The "y" coordinate measures the columns
 
-        // The "y" coordinate measures the rows
-        // The "x" coordinate measures the columns
-
-        // Iterate through each row
+        // Create a column in each row
         for x in 0..self.size {
-            let mut row: Vec<Square> = Vec::new();
+            let mut column: Vec<char> = Vec::new();
 
             // Iterate through each column
             for y in 0..self.size {
-                let coordinate = Coordinate { x: x + 1, y: y + 1 };
-                let square = Square {
-                    coordinate,
-                    state: SquareState::Empty,
-                };
+                let symbol = '_';
 
-                row.insert(y as usize, square);
+                column.insert(y as usize, symbol);
             }
 
-            columns.insert(x as usize, row);
+            self.grid.insert(x as usize, column);
         }
-
-        // Assign the created grid to the object attribute
-        self.grid = columns;
     }
+
+    pub fn update_symbol(&mut self, symbol: char, x: u32, y: u32) {
+        self.grid[x as usize - 1][y as usize - 1] = symbol;
+    }
+
+    // pub fn check_win(&self) -> Option<Player> {
+    // A win happens when:
+    //   the same symbol appears in an entire row
+    //   the same symbol appears in an entire column
+    //   the same symbol appears in an entire diagonal
+
+    // Check two diagonals
+    //  first diagonal starts at position (x=0, y=0)
+    //  second diagonal starts at position (x=grid.len -1, y=grid.len -1)
+
+    // let mut player: &Player = self.grid[0 as usize][0 as usize];
+    // for x in 1..self.size {
+    //     if self.grid[x as usize][x as usize] != symbol {
+    //         break;
+    //     }
+    // }
+
+    // return Some(player);
+    // }
 }
