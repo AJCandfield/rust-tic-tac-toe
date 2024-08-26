@@ -24,7 +24,7 @@ impl Table {
         let edge: &str = "|";
 
         for y in 0..self.size {
-            println!("");
+            println!();
 
             for x in 0..self.size {
                 print!("{edge}");
@@ -36,7 +36,7 @@ impl Table {
                 }
             }
         }
-        println!("");
+        println!();
     }
 
     pub fn init(&mut self) {

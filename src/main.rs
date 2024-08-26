@@ -57,14 +57,14 @@ fn main() {
 
             match input.as_str() {
                 "q" | "quit" | "exit" => {
-                    info_buffer.push(format!("Game over!"));
+                    info_buffer.push("Game over!".to_string());
                     game.is_on = false;
                     continue 'game;
                 }
 
                 "r" | "reset" => {
                     table.init();
-                    info_buffer.push(format!("Game reset!"));
+                    info_buffer.push("Game reset!".to_string());
                     continue 'duel;
                 }
 
@@ -108,14 +108,14 @@ fn main() {
                 .to_digit(10)
                 .expect("Error parsing 'x' coordinate from user input.");
 
-            if x > TABLE_SIZE || x < 1 {
+            if !(1..=TABLE_SIZE).contains(&x) {
                 error_buffer.push(format!(
                     "❌ Coordinate 'x' must be between 1 and {}!",
                     TABLE_SIZE
                 ));
             }
 
-            if y > TABLE_SIZE || y < 1 {
+            if !(1..=TABLE_SIZE).contains(&y) {
                 error_buffer.push(format!(
                     "❌ Coordinate 'y' must be between 1 and {}!",
                     TABLE_SIZE

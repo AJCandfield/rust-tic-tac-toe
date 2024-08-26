@@ -13,9 +13,15 @@ pub struct Game {
     pub turn_queue: VecDeque<Player>,
 }
 
+impl Default for Game {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Game {
-    pub fn new() -> Game {
-        Game {
+    pub fn new() -> Self {
+        Self {
             is_on: true,
             duel_count: 0,
             turn_count: 0,

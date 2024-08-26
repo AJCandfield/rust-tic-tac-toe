@@ -5,9 +5,15 @@ pub struct Duel {
     pub turn_count: u32,
 }
 
+impl Default for Duel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Duel {
-    pub fn new() -> Duel {
-        Duel {
+    pub fn new() -> Self {
+        Self {
             is_on: true,
             turn_count: 0,
         }

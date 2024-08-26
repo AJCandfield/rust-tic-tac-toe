@@ -6,6 +6,12 @@ pub struct MessageBuffer {
     messages: Vec<String>,
 }
 
+impl Default for MessageBuffer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MessageBuffer {
     pub fn new() -> MessageBuffer {
         MessageBuffer {
@@ -26,7 +32,7 @@ impl MessageBuffer {
     }
 
     pub fn is_empty(&self) -> bool {
-        return self.messages.is_empty();
+        self.messages.is_empty()
     }
 }
 
@@ -41,12 +47,12 @@ impl Prompt {
 
         let input: String = get_input(&msg);
 
-        return input;
+        input
     }
 
     pub fn next_duel() -> bool {
         loop {
-            let msg = format!("Another duel? [y/n]: ");
+            let msg = "Another duel? [y/n]: ".to_string();
             let input = get_input(&msg);
 
             match input.as_str() {
