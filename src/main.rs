@@ -5,7 +5,9 @@ use crate::resources::duel::Duel;
 use crate::resources::game::Game;
 use crate::resources::player::Player;
 use crate::resources::table::Table;
-use crate::utils::Utils;
+
+use crate::utils::cli::MessageBuffer;
+use crate::utils::cli::Prompt;
 
 fn main() {
     // "   A|B|C "
@@ -13,7 +15,11 @@ fn main() {
     // "2 |_|_|_ "
     // "3 |_|_|_ "
 
-    let size: u32 = 3;
+    // Size of the grid
+    const TABLE_SIZE: u32 = 5;
+
+    let mut error_buffer = MessageBuffer::new();
+    let mut info_buffer = MessageBuffer::new();
 
     let mut game = Game::new();
 
@@ -23,73 +29,74 @@ fn main() {
     let player_2: Player = Player::new(String::from("Gaby"), String::from("o"), 0);
     game.turn_queue.push_back(player_2);
 
+    // Start game loop
     'game: while game.is_on {
-        let mut table: Table = Table::new(size);
+        let mut table: Table = Table::new(TABLE_SIZE);
         table.init();
 
         // Start a new match
         let mut duel = Duel::new();
 
-        'duel: while duel.is_on {
-            // Start of turn
-
+        // Start a new turn
+        'duel: while duel.is_on && game.is_on {
             // Clean screen and draw game
             table.clear();
             table.draw();
 
-            // Print any error and messages in the buffer
-            duel.flush_msg();
-            duel.flush_err();
+            // Print any errors and messages in the buffer
+            error_buffer.flush();
+            info_buffer.flush();
 
-            // Clone the first player in the turn queue
+            // Get reference to first player in the turn queue
             let current_player = game
                 .turn_queue
                 .front_mut()
                 .expect("Failed to get first element of the queue.");
 
-            let input: String = Utils::prompt_input(current_player.name.as_str());
+            let input: String = Prompt::coordinates_or_command(current_player.name.as_str());
 
-            // Exit if input is in the array
-            if ["q", "quit", "exit"].contains(&input.as_str()) {
-                duel.msg_buffer.push(format!("Game over!"));
-                duel.is_on = false;
-                game.is_on = false;
-                continue 'game;
-            }
+            match input.as_str() {
+                "q" | "quit" | "exit" => {
+                    info_buffer.push(format!("Game over!"));
+                    game.is_on = false;
+                    continue 'game;
+                }
 
-            if ["r", "reset"].contains(&input.as_str()) {
-                table.init();
-                duel.msg_buffer.push(format!("Game reset!"));
-                continue 'duel;
-            }
+                "r" | "reset" => {
+                    table.init();
+                    info_buffer.push(format!("Game reset!"));
+                    continue 'duel;
+                }
 
-            if ["s", "stats"].contains(&input.as_str()) {
-                duel.msg_buffer
-                    .push(format!("Match count: {}", game.duel_count));
-                duel.msg_buffer
-                    .push(format!("Total turn count: {}", game.turn_count));
-                duel.msg_buffer
-                    .push(format!("Turn count in current match: {}", duel.turn_count));
-                continue 'duel;
-            }
+                "s" | "stats" => {
+                    info_buffer.push(format!("Match count: {}", game.duel_count));
+                    info_buffer.push(format!("Total turn count: {}", game.turn_count));
+                    info_buffer.push(format!("Turn count in current match: {}", duel.turn_count));
+                    continue 'duel;
+                }
 
-            // Temp condition to simulate a win
-            if ["w", "win"].contains(&input.as_str()) {
-                duel.turn_count += 1;
-                game.turn_count += 1;
-                duel.is_on = false;
-                break 'duel;
-            }
+                "w" | "win" => {
+                    duel.turn_count += 1;
+                    game.turn_count += 1;
+                    duel.is_on = false;
+                    break 'duel;
+                }
+
+                _ => {
+                    println!("nothing selected");
+                }
+            };
 
             let input: Vec<char> = input.chars().collect();
             if input.len() != 2 {
                 println!();
-                duel.err_buffer
-                    .push(format!("❌ Please, enter two digits between 1 to {size}!"));
+                error_buffer.push(format!(
+                    "❌ Please, enter two digits between 1 to {TABLE_SIZE}!"
+                ));
             }
 
             // Next turn
-            if !duel.err_buffer.is_empty() {
+            if !error_buffer.is_empty() {
                 continue 'duel;
             }
 
@@ -101,24 +108,28 @@ fn main() {
                 .to_digit(10)
                 .expect("Error parsing 'x' coordinate from user input.");
 
-            if x > size || x < 1 {
-                duel.err_buffer
-                    .push(format!("❌ Coordinate 'x' must be between 1 and {}!", size));
+            if x > TABLE_SIZE || x < 1 {
+                error_buffer.push(format!(
+                    "❌ Coordinate 'x' must be between 1 and {}!",
+                    TABLE_SIZE
+                ));
             }
 
-            if y > size || y < 1 {
-                duel.err_buffer
-                    .push(format!("❌ Coordinate 'y' must be between 1 and {}!", size));
+            if y > TABLE_SIZE || y < 1 {
+                error_buffer.push(format!(
+                    "❌ Coordinate 'y' must be between 1 and {}!",
+                    TABLE_SIZE
+                ));
             }
 
             // Next turn
-            if !duel.err_buffer.is_empty() {
+            if !error_buffer.is_empty() {
                 continue 'duel;
             }
 
             table.update_symbol(&current_player.symbol, x, y);
 
-            duel.msg_buffer.push(format!(
+            info_buffer.push(format!(
                 "Player '{}' played x:{} and y:{}",
                 current_player.name, x, y,
             ));
@@ -128,10 +139,9 @@ fn main() {
             if victory {
                 table.clear();
                 table.draw();
-                duel.msg_buffer
-                    .push(format!("{} won the game!", current_player.name));
+                info_buffer.push(format!("{} won the game!", current_player.name));
                 current_player.score += 1;
-                duel.flush_msg();
+                info_buffer.flush();
                 duel.is_on = false;
             }
 
@@ -143,6 +153,6 @@ fn main() {
         }
 
         game.duel_count += 1;
-        game.is_on = Utils::prompt_next_duel();
+        game.is_on = Prompt::next_duel();
     }
 }
